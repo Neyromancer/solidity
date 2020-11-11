@@ -1,5 +1,8 @@
 ### 0.7.6 (unreleased)
 
+Language Features:
+ * The fallback function can now also have a single ``calldata`` argument (equaling ``msg.data``) and return ``bytes memory`` (which will not be ABI-encoded but returned as-is).
+
 
 ### 0.7.5 (2020-11-18)
 
