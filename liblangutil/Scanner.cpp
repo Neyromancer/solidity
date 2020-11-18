@@ -79,6 +79,8 @@ string to_string(ScannerError _errorCode)
 		case ScannerError::IllegalExponent: return "Invalid exponent.";
 		case ScannerError::IllegalNumberEnd: return "Identifier-start is not allowed at end of a number.";
 		case ScannerError::OctalNotAllowed: return "Octal numbers not allowed.";
+		case ScannerError::DirectionalOverrideUnderflowInComment: return "Unicode direction override underflow in comment.";
+		case ScannerError::DirectionalOverrideMismatchInComment: return "Mismatching directional override markers in comment.";
 		default:
 			solAssert(false, "Unhandled case in to_string(ScannerError)");
 			return "";
@@ -271,12 +273,67 @@ bool Scanner::skipWhitespaceExceptUnicodeLinebreak()
 	return sourcePos() != startPosition;
 }
 
+struct Scanner::UnicodeDirectionOverrideProcessor
+{
+	Scanner& scanner;
+	int rtlOverrideDepth = 0;
+
+	pair<bool, ScannerError> operator()()
+	{
+		// U+202D (LRO - Left-to-Right Override)
+		// U+202E (RLO - Right-to-Left Override)
+		if (
+			scanner.tryScanByteSequence("\xE2\x80\xAD") ||
+			scanner.tryScanByteSequence("\xE2\x80\xAE")
+		)
+		{
+			rtlOverrideDepth++;
+			return pair{true, ScannerError::NoError};
+		}
+		else if (scanner.tryScanByteSequence("\xE2\x80\xAC")) // U+202C (PDF - Pop Directional Formatting)
+		{
+			rtlOverrideDepth--;
+			if (rtlOverrideDepth < 0)
+				return pair{true, ScannerError::DirectionalOverrideUnderflowInComment};
+			else
+				return pair{true, ScannerError::NoError};
+		}
+		else
+			return pair{false, ScannerError::NoError};
+	}
+
+	ScannerError error() const noexcept
+	{
+		if (rtlOverrideDepth < 0)
+			return ScannerError::DirectionalOverrideUnderflowInComment;
+		else if (rtlOverrideDepth > 0)
+			return ScannerError::DirectionalOverrideMismatchInComment;
+		else
+			return ScannerError::NoError;
+	}
+};
+
 Token Scanner::skipSingleLineComment()
 {
+	UnicodeDirectionOverrideProcessor unicodeDirectionalOverride{*this};
+
 	// Line terminator is not part of the comment. If it is a
 	// non-ascii line terminator, it will result in a parser error.
 	while (!isUnicodeLinebreak())
-		if (!advance()) break;
+	{
+		auto const [processed, errorCode] = unicodeDirectionalOverride();
+		if (processed && errorCode != ScannerError::NoError)
+			return setError(errorCode);
+		else if (!processed)
+		{
+			if (!advance())
+				break;
+		}
+	}
+
+	if (unicodeDirectionalOverride.error() != ScannerError::NoError)
+		// Unbalanced RLO/LRO/PDF codepoint sequences in comment.
+		return setError(unicodeDirectionalOverride.error());
 
 	return Token::Whitespace;
 }
@@ -349,18 +406,30 @@ size_t Scanner::scanSingleLineDocComment()
 
 Token Scanner::skipMultiLineComment()
 {
+	UnicodeDirectionOverrideProcessor unicodeDirectionalOverride{*this};
+
 	while (!isSourcePastEndOfInput())
 	{
-		char ch = m_char;
-		advance();
-
-		// If we have reached the end of the multi-line comment, we
-		// consume the '/' and insert a whitespace. This way all
-		// multi-line comments are treated as whitespace.
-		if (ch == '*' && m_char == '/')
+		auto const [processed, errorCode] = unicodeDirectionalOverride();
+		if (processed && errorCode != ScannerError::NoError)
+			return setError(errorCode);
+		else if (!processed)
 		{
-			m_char = ' ';
-			return Token::Whitespace;
+			char ch = m_char;
+			advance();
+
+			// If we have reached the end of the multi-line comment, we
+			// consume the '/' and insert a whitespace. This way all
+			// multi-line comments are treated as whitespace.
+			if (ch == '*' && m_char == '/')
+			{
+				if (unicodeDirectionalOverride.error() != ScannerError::NoError)
+					// Unbalanced RLO/LRO/PDF codepoint sequences in comment.
+					return setError(unicodeDirectionalOverride.error());
+
+				m_char = ' ';
+				return Token::Whitespace;
+			}
 		}
 	}
 	// Unterminated multi-line comment.
