@@ -9,23 +9,24 @@ version: 2.1
 parameters:
   ubuntu-1804-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu1804-3
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:19f613d2ac47fedff654dacef984d8a64726c4d67ae8f2667a85ee7d97ac4c1c"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu1804-4
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:a22ae6b4abda0b1b752733fd6b9398cbfe78ce967be6aac7aa8a817981535ce7"
   ubuntu-2004-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2004-3
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:aeedbe7390a7383815f0cf0f8a1b8bf84dc5e334a3b0043ebcdf8b1bdbe80a81"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2004-4
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:fe0218abdc1a4981830f6555b940423e481accb9329707e82c98ba6a0acb889c"
   ubuntu-2004-clang-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2004.clang-3
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:2593c15689dee5b5bdfff96a36c8c68a468cd3b147c41f75b820b8fabc257be9"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2004.clang-4
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:d6bd43659a7888911b187b2d5d850a8c392a9ebd1d6d027fc04389bf2cab9efd"
   ubuntu-1604-clang-ossfuzz-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu1604.clang.ossfuzz-5
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:65901cd8b64b5959bc4c907df47bb7be3d3b00c9ae8948c75aad7d4c57875cf0"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu1604.clang.ossfuzz-6
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:e55db89c1f44255bccf900d046343befc3ac4f7fe2674dfa26647258f97cb9ab"
   emscripten-docker-image:
     type: string
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:23dad3b34deae8107c8551804ef299f6a89c23ed506e8118fac151e2bdc9018c"
+    # solbuildpackpusher/solidity-buildpack-deps:emscripten-3
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:d4a83db1c11b988149a912f09fb144d3ab80646a737dc2cd83de9c761202ff2e"
 
 orbs:
   win: circleci/windows@2.2.0
