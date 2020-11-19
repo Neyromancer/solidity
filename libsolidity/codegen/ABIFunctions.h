@@ -165,6 +165,11 @@ public:
 		EncodingOptions const& _options
 	);
 
+	/// Internal decoding function that is also used by some copying routines.
+	/// @returns the name of a function that decodes struct
+	/// signature: (dataStart, dataEnd) -> decodedStruct
+	std::string abiDecodingFunctionStruct(StructType const& _type, bool _fromMemory);
+
 private:
 	/// Part of @a abiEncodingFunction for array target type and given calldata array.
 	/// Uses calldatacopy and does not perform cleanup or validation and can therefore only
@@ -238,8 +243,6 @@ private:
 	std::string abiDecodingFunctionByteArray(ArrayType const& _type, bool _fromMemory);
 	/// Part of @a abiDecodingFunction for calldata struct types.
 	std::string abiDecodingFunctionCalldataStruct(StructType const& _type);
-	/// Part of @a abiDecodingFunction for struct types.
-	std::string abiDecodingFunctionStruct(StructType const& _type, bool _fromMemory);
 	/// Part of @a abiDecodingFunction for array types.
 	std::string abiDecodingFunctionFunctionType(FunctionType const& _type, bool _fromMemory, bool _forUseOnStack);
 
