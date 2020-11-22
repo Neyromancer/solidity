@@ -224,13 +224,17 @@ enum class WhenError
 	Throw = 1,
 };
 
-enum class HexPrefix
+// TODO( kormulev ): check default type
+// is good idea to set type explicitly or leave it default defined
+enum class HexPrefix : std::uint8_t
 {
 	DontAdd = 0,
 	Add = 1,
 };
 
-enum class HexCase
+// TODO( kormulev ): check default type
+// is good idea to set type explicitly or leave it default defined
+enum class HexCase : std::uint8_t
 {
 	Lower = 0,
 	Upper = 1,

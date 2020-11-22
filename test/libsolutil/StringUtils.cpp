@@ -152,6 +152,9 @@ BOOST_AUTO_TEST_CASE(test_format_number_readable)
 	//for codegen/ExpressionCompiler
 	BOOST_CHECK_EQUAL(formatNumberReadable(u256(-1)), "2**256 - 1");
 
+//	BOOST_CHECK_EQUAL(formatNumberReadable(s256(-1)), "2**256 - 1");
+	BOOST_CHECK_EQUAL(formatNumberReadable(s256(110-115)), "-2**255");
+
 	// for formal/SMTChecker
 	BOOST_CHECK_EQUAL(
 			formatNumberReadable(frontend::IntegerType(256).minValue()), "0");

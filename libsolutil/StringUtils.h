@@ -115,44 +115,91 @@ inline std::string formatNumberReadable(
 	static_assert(
 		std::is_same<bigint, T>::value || !std::numeric_limits<T>::is_signed,
 		"only unsigned types or bigint supported"
-	); //bigint does not carry sign bit on shift
+	); // bigint does not carry sign bit on shift
 
 	// smaller numbers return as decimal
-	if (_value <= 0x1000000)
+	//TODO: (KORMULEV) 0x1000000 - 16 777 216 (what is about this number? why was it chosen?)
+	if (boost::multiprecision::abs(_value) <= 0x1000000)
 		return _value.str();
 
 	HexCase hexcase = HexCase::Mixed;
 	HexPrefix prefix = HexPrefix::Add;
 
+	// в чем разница между 1 и 2 случаем?
+
+	// 1.
 	// when multiple trailing zero bytes, format as N * 2**x
+	// 0x8000000 -> 0x08 * 2**24
 	int i = 0;
-	T v = _value;
+	auto is_negative = boost::multiprecision::isless(_value, 0);
+	T tmp = (is_negative) ? boost::multiprecision::abs(_value) : _value;
+	T v = tmp;
+	// shift right require separate hardware( instruction ) for unsigned and signed operations
+	// мое решение скорее всего в этом случае будет не верным, т.к. я преобразую
+	// отрицательное число к положительному и работаю с ним как с положительным,
+	// хотя оно отрицательное
+	// TODO: ( KORMULEV ) подумать насчет преобразования к положительному числу из отрицательного.
+	// что происходит тут
+	// двигаем пока 0
+	// 0xff -> 11111111
+
+	// зачем это нужно и при каком v данное условие выполняется?
+	// ( v & 0xff ) == 0 когда v >= 10^9
+
+	// это колличество смещений, т.е. имеем степень i * 8
+	// таким образом тут мы вычисляем степень 2ки
+
+	// понять как получить верное значение v если оно signed
+	// если число отрицательное его нужно будет преобразовать
+	// в unsigned через two's complement
 	for (; (v & 0xff) == 0; v >>= 8)
 		++i;
 	if (i > 2)
 	{
 		// 0x100 yields 2**8 (N is 1 and redundant)
+		// это скорее всего будет работать
 		if (v == 1)
-			return "2**" + std::to_string(i * 8);
-		return toHex(toCompactBigEndian(v), prefix, hexcase) +
+		{
+			auto res = "2**" + std::to_string(i * 8);
+			return (is_negative) ? '-' + res : res;
+		}
+
+		// если после преобразования v не стало 1
+		// например 1200000000 после преобразования v = 140
+		// то попадаем сюда
+		// это скорее всего работать не будет из за преобразования отрицательного
+		// числа к Hex
+
+		// необходимо добавить дополнительное преобразование к hex для
+		// signed чисел
+		auto res = toHex(toCompactBigEndian(v), prefix, hexcase) +
 			" * 2**" +
 			std::to_string(i * 8);
+		return (is_negative) ? '-' + res : res;
 	}
 
+	// 2.
 	// when multiple trailing FF bytes, format as N * 2**x - 1
 	i = 0;
-	for (v = _value; (v & 0xff) == 0xff; v >>= 8)
+	// shift right require separate hardware( instruction ) for unsigned and signed operations
+	for (v = tmp; (v & 0xff) == 0xff; v >>= 8)
 		++i;
 	if (i > 2)
 	{
 		// 0xFF yields 2**8 - 1 (v is 0 in that case)
 		if (v == 0)
-			return "2**" + std::to_string(i * 8) + " - 1";
-		return toHex(toCompactBigEndian(T(v + 1)), prefix, hexcase) +
+		{
+			auto res = "2**" + std::to_string(i * 8) + " - 1";
+			return (is_negative) ? '-' + res : res;
+		}
+
+		auto res = toHex(toCompactBigEndian(T(v + 1)), prefix, hexcase) +
 			" * 2**" + std::to_string(i * 8) +
 			" - 1";
+		return (is_negative) ? '-' + res : res;
 	}
 
+	// что происходит тут?
 	std::string str = toHex(toCompactBigEndian(_value), prefix, hexcase);
 	if (_useTruncation)
 	{
@@ -160,21 +207,22 @@ inline std::string formatNumberReadable(
 		size_t len = str.size();
 
 		if (len < 24)
-			return str;
+			return (is_negative) ? '-' + str : str;
 
 		size_t const initialChars = (prefix == HexPrefix::Add) ? 6 : 4;
 		size_t const finalChars = 4;
 		size_t numSkipped = len - initialChars - finalChars;
 
-		return str.substr(0, initialChars) +
+		auto res = str.substr(0, initialChars) +
 			"...{+" +
 			std::to_string(numSkipped) +
 			" more}..." +
 			str.substr(len-finalChars, len);
+		return (is_negative) ? '-' + res : res;
 	}
 
 	// otherwise, show whole value.
-	return str;
+	return (is_negative) ? '-' + str : str;
 }
 
 }
